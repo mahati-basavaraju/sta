@@ -202,3 +202,135 @@ Difference between different clock networks is the skew. Refer the below diagram
 The clock pulse given at the clock port reaches the flops but with degradation due to parasitic capacitances. Pulse width analysis is required to understand how much can the clock pulse degarde for the circuit to still be working as exepcted. (i.e., if the clock pulse width reduces too much, then it might be not be even enough to load the data)
 
 ![image](https://user-images.githubusercontent.com/110677094/190871760-ad59ed25-2534-46ea-a01a-c87edda19747.png)
+
+
+###  Section 2 - Introduction to timing graph
+
+Types of setup/ hold analysis
+
+1. reg2reg
+
+Consider specifications as 
+
+Clock frequency (F) = 1GHz
+Clock Period (T) = 1/F = 1ns
+
+and also consider below circuit for further analysis
+
+![image](https://user-images.githubusercontent.com/110677094/191672073-3680ff02-e7ea-4cfd-b016-897870d67cfa.png)
+
+
+
+Timing Analysis (with real clocks)
+
+Setup Analysis - Single clock
+
+Let's begin with the combinational logic
+
+![image](https://user-images.githubusercontent.com/110677094/191672272-243cca0e-9e72-48f9-92fb-bdd6b7bcee1e.png)
+
+
+Converting the combinational circuit into a Directed Acyclic graph (DAG). This is known as timing graph in STA.
+
+Timing graph is a representation of the complete circuit in nodes. using timing grpaphs, delays and arrival times can be calculated easily.
+
+![image](https://user-images.githubusercontent.com/110677094/191673218-c1cbce37-f264-4985-aa33-888317b07fff.png)
+
+
+Note that the cell delay, wire delay and signal arrival time values are in units. (In real scenario, units are in pico seconds)
+
+![image](https://user-images.githubusercontent.com/110677094/191674527-d3064813-1171-4e46-9eaa-d479cad24d19.png)
+
+####Actual Arrival Time (AAT)
+
+Calculating arrival times for all nodes
+
+Few cell have more than one node as input, the arrival time for them is calculated as below
+
+![image](https://user-images.githubusercontent.com/110677094/191675046-31c9ee53-d8f3-42a1-abb5-442e6bfdc350.png)
+
+![image](https://user-images.githubusercontent.com/110677094/191675088-1eaa8fd2-59d7-46d9-ba3c-f6c6b5f4badc.png)
+
+The selection of A1 or A2 depends on the type of analysis one is trying to do
+
+Here since we are considering a reg2reg path, and the condition that arrival time should be less than max delay , we need to consider all worst case delays. Hence selecting A2 for the above example
+
+![image](https://user-images.githubusercontent.com/110677094/191675509-6f5ce0a6-398b-4978-bfdf-26301f0ed4cd.png)
+
+After calculating all the arrival times in a similar fashion, below is the circuit digram.
+
+![image](https://user-images.githubusercontent.com/110677094/191675657-620fef90-94b6-4606-8acf-a72cc76796b2.png)
+
+Slack is computed is based on above timing graph.
+
+####Required Arrival Time (RAT)
+
+![image](https://user-images.githubusercontent.com/110677094/191675958-ff7c62da-c6c1-4944-b5e6-6514d864ccc4.png)
+
+The term 'expect at latest transition' implies that they are the constraints or the specifications.
+
+Difference between AAT and RAT
+
+![image](https://user-images.githubusercontent.com/110677094/191676220-67bf9f07-5e56-4cae-9c40-2a69af89a017.png)
+
+![image](https://user-images.githubusercontent.com/110677094/191676283-337d4322-2186-4e7c-8424-ac4ef5e58dcd.png)
+
+Where can this be helpful? To identify which node is giving the most negative slack if we see a negative slack at the output.
+
+Let's assume or the system specification requires that the RAT isi 7.55 ns.
+Calculating the RATs for all the all nodes as below.
+
+![image](https://user-images.githubusercontent.com/110677094/191676736-ad3928ad-d314-4d0d-af0f-031f64cfde17.png)
+
+![image](https://user-images.githubusercontent.com/110677094/191676799-4111db8b-f68a-405f-a712-df17bcf7825e.png)
+
+Which RAT to consider? Take the best case.
+Reason: If we consider the worst case to compute the slack i.e, required arrival time - actual arrival time , then there is a loss or optimism of few units.
+(Will be explained in detail in next sections)
+
+![image](https://user-images.githubusercontent.com/110677094/191677335-6d2ee47f-4cd1-49be-a4b8-fab2996ab2a3.png)
+
+The slack is defined as 
+
+![image](https://user-images.githubusercontent.com/110677094/191677494-3e5b74c2-6dad-42d0-b367-d0146a568684.png)
+
+Negative slack is shown as timing constraints violated
+
+One way to remove negative slack to use a cell with same functionality with a different cell delay so as to accomodate the timing constraints. This is what is done in ECO (Engineering Change order)
+
+![image](https://user-images.githubusercontent.com/110677094/191679556-ec8b8e67-b590-4b81-8e46-c4874d3cfc17.png)
+
+The nodes i2(0), a(2), c(3) and d(2) can be toned to get a positive slack.
+
+Consider d node for further analysis
+
+GBA - worst case analysis
+PBA - considers actual paths that will be traced on silicon
+
+In GBA, Slack is -0.35
+
+![image](https://user-images.githubusercontent.com/110677094/191680402-60f86557-e283-46cc-8a9f-af86d478cb31.png)
+
+In PBA, slack is +0.55
+
+![image](https://user-images.githubusercontent.com/110677094/191680438-9c7fa71e-fc7a-4c24-b98b-f10b64fd1905.png)
+
+But this comes with a certain cost, ie.e., time to do the calculations. There is a run time impact (Will be explained in later sections)
+
+For accurate and detailed timing analysis, DAG should be with pin node conventions. (i.e, each pin , inputs and outputs will have its own AAT, RAT and Slack)
+
+For pin node conventions, all pin information needs to be extracted.
+
+![image](https://user-images.githubusercontent.com/110677094/191681410-add31771-8dac-406b-b9a0-9f5089e46bbc.png)
+
+![image](https://user-images.githubusercontent.com/110677094/191681662-8595d8c5-3829-40fa-aaf0-0b9c0f282ac6.png)
+
+###  Section 3 - Clk-to-q delay, library setup, hold time
+
+Check the transistor level circuitry for launch flop and capture flop.
+
+But why?
+
+
+
+ 
